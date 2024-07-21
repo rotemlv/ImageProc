@@ -40,16 +40,57 @@ def setup_mask_rcnn():
     return cfg, predictor
 
 
+def perform_segmentation_and_show_all_classes(cfg, predictor, image_path):
+    """Predict and show all classes above threshold"""
+    im = Image.open(image_path).convert("RGB")
+    np_image = np.array(im)
+
+    # Perform inference
+    outputs = predictor(np_image)
+    # print(outputs)
+    # Visualize the prediction
+    v = Visualizer(np_image[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+    out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+
+    # Display the image
+    plt.imshow(out.get_image()[:, :, ::-1])
+    plt.show()
+
+
 def perform_segmentation(cfg, predictor, image_path):
+    """Only shows region and mask for best scoring class"""
     im = Image.open(image_path).convert("RGB")
     np_image = np.array(im)
 
     # Perform inference
     outputs = predictor(np_image)
 
-    # Visualize the prediction
+    # Extract instances from prediction outputs
+    instances = outputs["instances"]
+
+    # Initialize dictionaries to track max score per class and corresponding index
+    max_score_per_class = {}
+    max_score = -float('inf')
+    for i in range(len(instances.pred_classes)):
+        class_id = instances.pred_classes[i].item()
+        score = instances.scores[i].item()
+
+        # Update max score and corresponding index if current score is higher
+        if score > max_score:
+            max_score = score
+            max_score_per_class.clear()
+            max_score_per_class[class_id] = (score, i)
+
+    # Extract indices of instances with max scores for their classes
+    max_scoring_indices = [info[1] for info in max_score_per_class.values()]
+
+    # Filter instances to keep only those with max scores per class
+    filtered_instances = instances[max_scoring_indices]
+    # print(filtered_instances)
+
+    # Visualize the prediction with only the instances having the highest scores per class
     v = Visualizer(np_image[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-    out = v.draw_instance_predictions(outputs["instances"].to("cpu"))
+    out = v.draw_instance_predictions(filtered_instances)
 
     # Display the image
     plt.imshow(out.get_image()[:, :, ::-1])
