@@ -1,6 +1,7 @@
 import os
 
 import torch
+
 """
 install detectron2:
 python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
@@ -27,8 +28,8 @@ from sklearn.cluster import KMeans
 import numpy as np
 import scipy
 
-
 from detectron2 import model_zoo
+
 
 def setup_mask_rcnn():
     cfg = get_cfg()
@@ -57,7 +58,7 @@ def perform_segmentation_and_show_all_classes(cfg, predictor, image_path):
     plt.show()
 
 
-def perform_segmentation(cfg, predictor, image_path):
+def perform_segmentation(cfg, predictor, image_path, threshold_prob=0.5):
     """Only shows region and mask for best scoring class"""
     im = Image.open(image_path).convert("RGB")
     np_image = np.array(im)
@@ -68,21 +69,9 @@ def perform_segmentation(cfg, predictor, image_path):
     # Extract instances from prediction outputs
     instances = outputs["instances"]
 
-    # Initialize dictionaries to track max score per class and corresponding index
-    max_score_per_class = {}
-    max_score = -float('inf')
-    for i in range(len(instances.pred_classes)):
-        class_id = instances.pred_classes[i].item()
-        score = instances.scores[i].item()
-
-        # Update max score and corresponding index if current score is higher
-        if score > max_score:
-            max_score = score
-            max_score_per_class.clear()
-            max_score_per_class[class_id] = (score, i)
-
-    # Extract indices of instances with max scores for their classes
-    max_scoring_indices = [info[1] for info in max_score_per_class.values()]
+    max_scoring_indices = [info[1] for info in sorted([(instances.scores[i].item(), i)
+                                                       for i in range(len(instances.pred_classes))
+                                                       if instances.scores[i].item() >= threshold_prob])]
 
     # Filter instances to keep only those with max scores per class
     filtered_instances = instances[max_scoring_indices]

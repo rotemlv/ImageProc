@@ -48,15 +48,19 @@ def region_based_segmentation(image_path, threshold_value):
 
 def manual_sobel_operator(image):
     # Define Sobel operators
-    sobel_x = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
-    sobel_y = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
-
+    sobel_x = np.array([[-1, 0, 1],
+                        [-2, 0, 2],
+                        [-1, 0, 1]])
+    sobel_y = np.array([[1, 2, 1],
+                        [0, 0, 0],
+                        [-1, -2, -1]])
+    sobelsum = sobel_y+sobel_x
     # Manually convolve the image with Sobel operators
-    Gx = scipy.signal.convolve2d(image, sobel_x, mode='same', boundary='symm')
-    Gy = scipy.signal.convolve2d(image, sobel_y, mode='same', boundary='symm')
+    Gx = scipy.signal.convolve2d(image, sobelsum, mode='same', boundary='symm')
+    #Gy = scipy.signal.convolve2d(image, sobel_y, mode='same', boundary='symm')
 
     # Calculate the magnitude of the gradient
-    G = np.hypot(Gx, Gy)
+    G = np.norm(Gx)
     G = G / G.max() * 255  # Normalize to 0-255 scale
 
     return G
